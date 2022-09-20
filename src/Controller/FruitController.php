@@ -59,7 +59,7 @@ class FruitController extends AbstractController
             $fruit->setNutrients($nutrients);
             $entityManager->persist($fruit);
         }
-        
+
         $entityManager->flush();
         
         return new JsonResponse('Succesfully loaded all fruits from JSON.');
