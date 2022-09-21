@@ -21,7 +21,7 @@ class FruitSaladRecipe
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     #[ORM\JoinColumn(nullable: false)]
-    private ?nutrients $nutrients = null;
+    private ?Nutrients $nutrients = null;
 
     #[ORM\Column]
     private ?int $weight = null;
@@ -72,12 +72,12 @@ class FruitSaladRecipe
         return $this;
     }
 
-    public function getNutrients(): ?nutrients
+    public function getNutrients(): ?Nutrients
     {
         return $this->nutrients;
     }
 
-    public function setNutrients(nutrients $nutrients): self
+    public function setNutrients(Nutrients $nutrients): self
     {
         $this->nutrients = $nutrients;
 

@@ -22,7 +22,7 @@ class FruitInSalad
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     #[ORM\JoinColumn(nullable: false)]
-    private ?nutrients $nutrients = null;
+    private ?Nutrients $nutrients = null;
 
     #[ORM\ManyToOne(inversedBy: 'FruitsInSalad')]
     #[ORM\JoinColumn(nullable: false)]
@@ -57,12 +57,12 @@ class FruitInSalad
         return $this;
     }
 
-    public function getNutrients(): ?nutrients
+    public function getNutrients(): ?Nutrients
     {
         return $this->nutrients;
     }
 
-    public function setNutrients(nutrients $nutrients): self
+    public function setNutrients(Nutrients $nutrients): self
     {
         $this->nutrients = $nutrients;
 

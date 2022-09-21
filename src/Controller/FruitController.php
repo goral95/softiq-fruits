@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\Fruit;
 use App\Entity\Nutrients;
@@ -13,14 +12,18 @@ use Symfony\Component\HttpFoundation\Request;
 
 class FruitController extends AbstractController
 {   
+    private $entityManager;
 
+    public function __construct(EntityManagerInterface $entityManager){
+        $this->entityManager = $entityManager;
+    }
     /**
 	* @Route("/fruits", methods="GET")
 	*/
-    public function showAllFruits(EntityManagerInterface $entityManager): JsonResponse
+    public function showAllFruits(): JsonResponse
     {   
         
-        $repository = $entityManager->getRepository(Fruit::class);
+        $repository = $this->entityManager->getRepository(Fruit::class);
         $fruits = $repository->findAll();
         $data = [];
 
@@ -43,7 +46,7 @@ class FruitController extends AbstractController
     /**
 	* @Route("/fruits/load", methods="POST")
 	*/
-    public function loadAllFruits(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function loadAllFruits(Request $request): JsonResponse
     {   
         $fruitsFromJson = json_decode($request->getContent(),true);
 
@@ -57,10 +60,10 @@ class FruitController extends AbstractController
             $nutrients->setSugar($fruitToLoad['nutrients']['sugar']);
             $fruit->setName($fruitToLoad['name']);
             $fruit->setNutrients($nutrients);
-            $entityManager->persist($fruit);
+            $this->entityManager->persist($fruit);
         }
 
-        $entityManager->flush();
+        $this->entityManager->flush();
         
         return new JsonResponse('Succesfully loaded all fruits from JSON.');
     }
