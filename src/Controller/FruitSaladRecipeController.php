@@ -62,6 +62,64 @@ class FruitSaladRecipeController extends AbstractController
         return new JsonResponse("Utworzono nowy przepis o id: ".$fruitSaladRecipeToCreate->getId());
     }
 
+    /**
+	* @Route("/update/{id}", methods="PUT")
+	*/
+    public function updateFruitSaladRecipe(Request $request, int $id): JsonResponse
+    {
+        $saladRecipeJson = json_decode($request->getContent(),true);
+
+        $fruitSaladRecipeToUpdate = $this->entityManager->getRepository(FruitSaladRecipe::class)->find($id);
+        
+        if(empty($fruitSaladRecipeToUpdate)){
+            return new JsonResponse('Nie ma takiej salatki o id: '.$id, Response::HTTP_NOT_FOUND);
+        }
+
+        $errors = $this->validateInputForSaladRecipe($saladRecipeJson);
+
+        if(!(empty($errors))){
+            return new JsonResponse($errors, Response::HTTP_BAD_REQUEST);
+        }
+
+        $fruitSaladRecipeToUpdate->setName($saladRecipeJson['name']);
+        $fruitSaladRecipeToUpdate->setDescription($saladRecipeJson['description']);
+    
+        foreach($saladRecipeJson['fruitsInSalad'] as $fruitToAdd){
+            $fruitInSalad = new FruitInSalad();
+            $fruitInSalad->setWeight($fruitToAdd['weight']);
+            $fruitInSalad->setFruit($this->entityManager->getRepository(Fruit::class)->findOneBy(['name' => $fruitToAdd['name']]));
+            $fruitInSalad->setNutrients($this->calculateFruitNutrients($fruitInSalad));
+            $fruitSaladRecipeToUpdate->addFruitsInSalad($fruitInSalad);
+            $this->entityManager->persist($fruitInSalad);
+        }
+        
+        $fruitSaladRecipeToUpdate->setNutrients($this->calculateSaladNutrients($fruitSaladRecipeToUpdate->getFruitsInSalad()));
+        $fruitSaladRecipeToUpdate->setWeight($this->calculateSaladWeight($fruitSaladRecipeToUpdate->getFruitsInSalad()));
+        
+        $this->entityManager->persist($fruitSaladRecipeToUpdate);
+        $this->entityManager->flush();
+        
+        return new JsonResponse("Zaktualizowano przepis o id: ".$id);
+    }
+
+    /**
+	* @Route("/remove/{id}", methods="DELETE")
+	*/
+    public function removeFruitSaladRecipe(Request $request, int $id): JsonResponse
+    {
+    
+        $fruitSaladRecipeToRemove = $this->entityManager->getRepository(FruitSaladRecipe::class)->find($id);
+        
+        if(empty($fruitSaladRecipeToRemove)){
+            return new JsonResponse('Nie ma takiej salatki o id: '.$id, Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($fruitSaladRecipeToRemove);
+        $this->entityManager->flush();
+        
+        return new JsonResponse("Usunieto przepis o id: ".$id);
+    }
+
     private function calculateFruitNutrients(FruitInSalad $fruitInSalad): Nutrients
     {
         $nutrients = new Nutrients();
