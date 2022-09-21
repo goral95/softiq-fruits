@@ -9,6 +9,7 @@ use App\Entity\Nutrients;
 use App\Repository\FruitSaladRecipeRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
+use FOS\RestBundle\Serializer\Serializer;
 use PhpParser\Node\Expr\Cast\String_;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -83,6 +84,11 @@ class FruitSaladRecipeController extends AbstractController
 
         $fruitSaladRecipeToUpdate->setName($saladRecipeJson['name']);
         $fruitSaladRecipeToUpdate->setDescription($saladRecipeJson['description']);
+
+        $fruitsInSalad = $fruitSaladRecipeToUpdate->getFruitsInSalad()->toArray();
+        foreach($fruitsInSalad as $fruitInSalad){
+            $fruitSaladRecipeToUpdate->removeFruitsInSalad($fruitInSalad);
+        }
     
         foreach($saladRecipeJson['fruitsInSalad'] as $fruitToAdd){
             $fruitInSalad = new FruitInSalad();
@@ -93,10 +99,13 @@ class FruitSaladRecipeController extends AbstractController
             $this->entityManager->persist($fruitInSalad);
         }
         
+        
+
         $fruitSaladRecipeToUpdate->setNutrients($this->calculateSaladNutrients($fruitSaladRecipeToUpdate->getFruitsInSalad()));
         $fruitSaladRecipeToUpdate->setWeight($this->calculateSaladWeight($fruitSaladRecipeToUpdate->getFruitsInSalad()));
         
-        $this->entityManager->persist($fruitSaladRecipeToUpdate);
+        dd($fruitSaladRecipeToUpdate);
+
         $this->entityManager->flush();
         
         return new JsonResponse("Zaktualizowano przepis o id: ".$id);
@@ -118,6 +127,91 @@ class FruitSaladRecipeController extends AbstractController
         $this->entityManager->flush();
         
         return new JsonResponse("Usunieto przepis o id: ".$id);
+    }
+
+    /**
+	* @Route("/show", methods="GET")
+	*/
+    public function showAllSaladRecipes(): JsonResponse
+    {   
+        
+        $repository = $this->entityManager->getRepository(FruitSaladRecipe::class);
+        $saladRecipes = $repository->findAll();
+        $data = [];
+        $dataFruits = [];
+        
+        foreach($saladRecipes as $saladRecipe){
+            $fruitsInSalad = $saladRecipe->getFruitsInSalad()->toArray();
+            foreach($fruitsInSalad as $fruitInSalad){
+                array_push($dataFruits, $fruitInSalad->getFruit()->getName());
+            }
+            $data[] = [
+                'id' => $saladRecipe->getId(),
+                'name' => $saladRecipe->getName(),
+                'total weight' => $saladRecipe->getWeight(),
+                'total calories' => $saladRecipe->getNutrients()->getCalories(),
+                'fruits' => $dataFruits
+            ];
+            unset($dataFruits);
+            $dataFruits = array(); 
+        }
+
+        return new JsonResponse($data);
+        
+    }
+
+    /**
+	* @Route("/show/{id}", methods="GET")
+	*/
+    public function showSaladRecipe(int $id): JsonResponse
+    {   
+        
+        $fruitSaladRecipeToShow = $this->entityManager->getRepository(FruitSaladRecipe::class)->find($id);
+        
+        if(empty($fruitSaladRecipeToShow)){
+            return new JsonResponse('Nie ma takiej salatki o id: '.$id, Response::HTTP_NOT_FOUND);
+        }
+
+        $data = [];
+        $dataFruits = [];
+        $i = 1;
+        
+        
+            $fruitsInSalad = $fruitSaladRecipeToShow->getFruitsInSalad()->toArray();
+            foreach($fruitsInSalad as $fruitInSalad){
+                $dataFruits[] = [
+                    $i => array(
+                        'name' => $fruitInSalad->getFruit()->getName(),
+                        'weight' => $fruitInSalad->getWeight(),
+                        'nutrients' => array(
+                            'carbohydrates' => $fruitInSalad->getFruit()->getNutrients()->getCarbohydrates(),
+                            'protein' => $fruitInSalad->getFruit()->getNutrients()->getProtein(),
+                            'fat' => $fruitInSalad->getFruit()->getNutrients()->getFat(),
+                            'calories' => $fruitInSalad->getFruit()->getNutrients()->getCalories(),
+                            'sugar' => $fruitInSalad->getFruit()->getNutrients()->getSugar(),
+                        ),
+                    )
+                ];
+                $i++;
+            }
+            
+            $data[] = [
+                'id' => $fruitSaladRecipeToShow->getId(),
+                'name' => $fruitSaladRecipeToShow->getName(),
+                'description' => $fruitSaladRecipeToShow->getDescription(),
+                'total weight' => $fruitSaladRecipeToShow->getWeight(),
+                'nutrients' =>  array(
+                    'carbohydrates' => $fruitSaladRecipeToShow->getNutrients()->getCarbohydrates(),
+                    'protein' => $fruitSaladRecipeToShow->getNutrients()->getProtein(),
+                    'fat' => $fruitSaladRecipeToShow->getNutrients()->getFat(),
+                    'calories' => $fruitSaladRecipeToShow->getNutrients()->getCalories(),
+                    'sugar' => $fruitSaladRecipeToShow->getNutrients()->getSugar(),
+                ),
+                'fruits' => array($dataFruits)
+            ];
+        
+        return new JsonResponse($data);
+        
     }
 
     private function calculateFruitNutrients(FruitInSalad $fruitInSalad): Nutrients
