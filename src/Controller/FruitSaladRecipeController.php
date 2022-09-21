@@ -103,8 +103,6 @@ class FruitSaladRecipeController extends AbstractController
 
         $fruitSaladRecipeToUpdate->setNutrients($this->calculateSaladNutrients($fruitSaladRecipeToUpdate->getFruitsInSalad()));
         $fruitSaladRecipeToUpdate->setWeight($this->calculateSaladWeight($fruitSaladRecipeToUpdate->getFruitsInSalad()));
-        
-        dd($fruitSaladRecipeToUpdate);
 
         $this->entityManager->flush();
         
@@ -148,8 +146,8 @@ class FruitSaladRecipeController extends AbstractController
             $data[] = [
                 'id' => $saladRecipe->getId(),
                 'name' => $saladRecipe->getName(),
-                'total weight' => $saladRecipe->getWeight(),
-                'total calories' => $saladRecipe->getNutrients()->getCalories(),
+                'totalWeight' => $saladRecipe->getWeight(),
+                'totalCalories' => $saladRecipe->getNutrients()->getCalories(),
                 'fruits' => $dataFruits
             ];
             unset($dataFruits);
@@ -199,7 +197,7 @@ class FruitSaladRecipeController extends AbstractController
                 'id' => $fruitSaladRecipeToShow->getId(),
                 'name' => $fruitSaladRecipeToShow->getName(),
                 'description' => $fruitSaladRecipeToShow->getDescription(),
-                'total weight' => $fruitSaladRecipeToShow->getWeight(),
+                'totalWeight' => $fruitSaladRecipeToShow->getWeight(),
                 'nutrients' =>  array(
                     'carbohydrates' => $fruitSaladRecipeToShow->getNutrients()->getCarbohydrates(),
                     'protein' => $fruitSaladRecipeToShow->getNutrients()->getProtein(),
@@ -238,13 +236,15 @@ class FruitSaladRecipeController extends AbstractController
         $fat = 0;
         $calories = 0;
         $sugar = 0;
-        for($i = 0; !(is_null($fruitsInSalad->get($i))); $i++){
-            $carbohydrates += $fruitsInSalad->get($i)->getNutrients()->getCarbohydrates();
-            $protein += $fruitsInSalad->get($i)->getNutrients()->getProtein();
-            $fat += $fruitsInSalad->get($i)->getNutrients()->getFat();
-            $calories += $fruitsInSalad->get($i)->getNutrients()->getCalories();
-            $sugar += $fruitsInSalad->get($i)->getNutrients()->getSugar();
+        
+        foreach($fruitsInSalad->toArray() as $fruitInSalad){
+            $carbohydrates += $fruitInSalad->getNutrients()->getCarbohydrates();
+            $protein += $fruitInSalad->getNutrients()->getProtein();
+            $fat += $fruitInSalad->getNutrients()->getFat();
+            $calories += $fruitInSalad->getNutrients()->getCalories();
+            $sugar += $fruitInSalad->getNutrients()->getSugar();
         }
+
         $nutrients->setCarbohydrates($carbohydrates);
         $nutrients->setProtein($protein);
         $nutrients->setFat($fat);
@@ -258,8 +258,8 @@ class FruitSaladRecipeController extends AbstractController
     {   
         $weight = 0;
 
-        for($i = 0; !(is_null($fruitsInSalad->get($i))); $i++){
-            $weight += $fruitsInSalad->get($i)->getWeight();
+        foreach($fruitsInSalad->toArray() as $fruitInSalad){
+            $weight += $fruitInSalad->getWeight();
         }
 
         return $weight;
