@@ -7,8 +7,11 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: FruitSaladRecipeRepository::class)]
+#[UniqueEntity( fields: 'name', message: 'Taka nazwa salatki juz istnieje')]
 class FruitSaladRecipe
 {
     #[ORM\Id]
@@ -17,6 +20,7 @@ class FruitSaladRecipe
     private ?int $id = null;
 
     #[ORM\OneToMany(mappedBy: 'fruitSaladRecipe', targetEntity: FruitInSalad::class, orphanRemoval: true)]
+    #[Assert\Count(min: 2, minMessage: 'Przepis powinien miec conajmniej 2 owoce')]
     private Collection $FruitsInSalad;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
@@ -27,9 +31,12 @@ class FruitSaladRecipe
     private ?int $weight = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Nazwa przepisu nie moze byc pusta')]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank(message: 'Opis przepisu nie moze byc pusty')]
+    #[Assert\Length(min: 20, minMessage : 'Opis musi miec conajmniej 20 znakow')]
     private ?string $description = null;
 
     public function __construct()
