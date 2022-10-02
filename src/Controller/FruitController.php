@@ -2,45 +2,26 @@
 
 namespace App\Controller;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Annotation\Route;
-use App\Entity\Fruit;
-use App\Entity\Nutrients;
+use App\Service\FruitService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 class FruitController extends AbstractController
 {   
-    private $entityManager;
+    private $fruitService;
 
-    public function __construct(EntityManagerInterface $entityManager){
-        $this->entityManager = $entityManager;
+    public function __construct(FruitService $fruitService){
+        $this->fruitService = $fruitService;
     }
     /**
 	* @Route("/fruits", methods="GET")
 	*/
     public function showAllFruits(): JsonResponse
     {   
-        
-        $repository = $this->entityManager->getRepository(Fruit::class);
-        $fruits = $repository->findAll();
-        $data = [];
-
-        foreach($fruits as $fruit){
-            $data[] = [
-                'id' => $fruit->getId(),
-                'name' => $fruit->getName(),
-                'nutrients' => array(
-                    'carbohydrates' => $fruit->getNutrients()->getCarbohydrates(),
-                    'protein' => $fruit->getNutrients()->getProtein(),
-                    'fat' => $fruit->getNutrients()->getFat(),
-                    'calories' => $fruit->getNutrients()->getCalories(),
-                    'sugar' => $fruit->getNutrients()->getSugar(),
-                )
-            ];
-        }
-        return new JsonResponse($data);
+        $fruits = $this->fruitService->getAllFruits();
+        return new JsonResponse($fruits);
     }
 
     /**
@@ -49,22 +30,7 @@ class FruitController extends AbstractController
     public function loadAllFruits(Request $request): JsonResponse
     {   
         $fruitsFromJson = json_decode($request->getContent(),true);
-
-        foreach($fruitsFromJson as $fruitToLoad){
-            $fruit = new Fruit();
-            $nutrients = new Nutrients();
-            $nutrients->setCarbohydrates($fruitToLoad['nutrients']['carbohydrates']);
-            $nutrients->setProtein($fruitToLoad['nutrients']['protein']);
-            $nutrients->setFat($fruitToLoad['nutrients']['fat']);
-            $nutrients->setCalories($fruitToLoad['nutrients']['calories']);
-            $nutrients->setSugar($fruitToLoad['nutrients']['sugar']);
-            $fruit->setName($fruitToLoad['name']);
-            $fruit->setNutrients($nutrients);
-            $this->entityManager->persist($fruit);
-        }
-
-        $this->entityManager->flush();
-        
+        $this->fruitService->saveAllFruits($fruitsFromJson);
         return new JsonResponse('Succesfully loaded all fruits from JSON.');
     }
 }
