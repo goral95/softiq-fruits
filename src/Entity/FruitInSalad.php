@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\FruitInSaladRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: FruitInSaladRepository::class)]
 class FruitInSalad
@@ -15,9 +16,13 @@ class FruitInSalad
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotBlank(message: 'Nazwa owocu nie moze byc pusta lub zostala podana zla nazwa owocu')]
     private ?Fruit $fruit = null;
 
     #[ORM\Column]
+    #[Assert\NotBlank(message: 'Waga owocu nie moze byc pusta')]
+    #[Assert\Positive(message: 'Waga owocu musi byc dodatnia')]
+    #[Assert\DivisibleBy(value: 100, message: 'Waga owocu musi byc podzielna przez 100')]
     private ?int $Weight = null;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]

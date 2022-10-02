@@ -7,15 +7,18 @@ use App\Entity\FruitSaladRecipe;
 use App\Entity\Nutrients;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class FruitSaladRecipeService
 {
     private $entityManager;
     private $fruitSaladRecipeRepository;
+    private $validator;
 
-    public function __construct(EntityManagerInterface $entityManager){
+    public function __construct(EntityManagerInterface $entityManager, ValidatorInterface $validator){
         $this->entityManager = $entityManager;
         $this->fruitSaladRecipeRepository = $entityManager->getRepository(FruitSaladRecipe::class);
+        $this->validator = $validator;
     }
 
     public function getAllSaladRecipes(){
@@ -90,12 +93,7 @@ class FruitSaladRecipeService
     }
 
     public function addSaladRecipe($saladRecipeJson){
-        $errors = $this->validateInputForSaladRecipe($saladRecipeJson);
-
-        if(!(empty($errors))){
-            return $errors;
-        }
-
+        
         $fruitSaladRecipeToCreate = new FruitSaladRecipe;
         $fruitSaladRecipeToCreate->setName($saladRecipeJson['name']);
         $fruitSaladRecipeToCreate->setDescription($saladRecipeJson['description']);
@@ -104,14 +102,27 @@ class FruitSaladRecipeService
             $fruitInSalad = new FruitInSalad();
             $fruitInSalad->setWeight($fruitToAdd['weight']);
             $fruitInSalad->setFruit($this->entityManager->getRepository(Fruit::class)->findOneBy(['name' => $fruitToAdd['name']]));
+            $errors = $this->validator->validate($fruitInSalad);
+            if (count($errors) > 0) {
+                return $this->getErrorMessages($errors);
+            }
             $fruitInSalad->setNutrients($this->calculateFruitNutrients($fruitInSalad));
             $fruitSaladRecipeToCreate->addFruitsInSalad($fruitInSalad);
             $this->entityManager->persist($fruitInSalad);
         }
         
+        if($this->validateDifferentFruitsInSalad($fruitSaladRecipeToCreate->getFruitsInSalad())){
+            return array('Error'=> 'Nie mozna dodac takich samych owocow do salatki');
+        }
+
         $fruitSaladRecipeToCreate->setNutrients($this->calculateSaladNutrients($fruitSaladRecipeToCreate->getFruitsInSalad()));
         $fruitSaladRecipeToCreate->setWeight($this->calculateSaladWeight($fruitSaladRecipeToCreate->getFruitsInSalad()));
         
+        $errors = $this->validator->validate($fruitSaladRecipeToCreate);
+        if (count($errors) > 0) {
+            return $this->getErrorMessages($errors);
+        }
+
         $this->entityManager->persist($fruitSaladRecipeToCreate);
         $this->entityManager->flush();
 
@@ -126,12 +137,6 @@ class FruitSaladRecipeService
             return array('notFoundError'=> 'Nie ma takiej salatki o id: '.$id);
         }
 
-        $errors = $this->validateInputForSaladRecipe($saladRecipeJson);
-
-        if(!(empty($errors))){
-            return $errors;
-        }
-
         $fruitSaladRecipeToUpdate->setName($saladRecipeJson['name']);
         $fruitSaladRecipeToUpdate->setDescription($saladRecipeJson['description']);
 
@@ -144,13 +149,26 @@ class FruitSaladRecipeService
             $fruitInSalad = new FruitInSalad();
             $fruitInSalad->setWeight($fruitToAdd['weight']);
             $fruitInSalad->setFruit($this->entityManager->getRepository(Fruit::class)->findOneBy(['name' => $fruitToAdd['name']]));
+            $errors = $this->validator->validate($fruitInSalad);
+            if (count($errors) > 0) {
+                return $this->getErrorMessages($errors);
+            }
             $fruitInSalad->setNutrients($this->calculateFruitNutrients($fruitInSalad));
             $fruitSaladRecipeToUpdate->addFruitsInSalad($fruitInSalad);
             $this->entityManager->persist($fruitInSalad);
         }
+
+        if($this->validateDifferentFruitsInSalad($fruitSaladRecipeToUpdate->getFruitsInSalad())){
+            return array('Error'=> 'Nie mozna dodac takich samych owocow do salatki');
+        }
         
         $fruitSaladRecipeToUpdate->setNutrients($this->calculateSaladNutrients($fruitSaladRecipeToUpdate->getFruitsInSalad()));
         $fruitSaladRecipeToUpdate->setWeight($this->calculateSaladWeight($fruitSaladRecipeToUpdate->getFruitsInSalad()));
+
+        $errors = $this->validator->validate($fruitSaladRecipeToUpdate);
+        if (count($errors) > 0) {
+            return $this->getErrorMessages($errors);
+        }
 
         $this->entityManager->flush();
 
@@ -168,6 +186,29 @@ class FruitSaladRecipeService
         $this->entityManager->flush();
 
         return $id;
+    }
+
+    private function getErrorMessages($errors){
+        $errorsToReturn = array();
+            foreach($errors as $error){
+                $errorsToReturn[] = ['error' => $error->getMessage()];
+            }
+            return $errorsToReturn;
+    }
+
+    private function validateDifferentFruitsInSalad(Collection $fruitsInSalad){
+        
+        $fruitInSaladArray = array();
+
+        foreach($fruitsInSalad->toArray() as $fruitInSalad){
+            array_push($fruitInSaladArray, $fruitInSalad->getFruit()->getName());
+        }
+
+        if(count(array_unique($fruitInSaladArray)) != count($fruitInSaladArray)){
+            return true;
+        }
+
+        return false;
     }
 
     private function calculateFruitNutrients(FruitInSalad $fruitInSalad): Nutrients
